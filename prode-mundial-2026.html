@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prode Mundial 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --verde: #0a7c3e;
+    --verde-claro: #e8f5ee;
+    --verde-borde: #b2d8c0;
+    --gris-bg: #f4f4f2;
+    --gris-borde: #dddbd6;
+    --gris-header: #2c2c2a;
+    --texto: #1a1a18;
+    --texto-suave: #5a5a58;
+    --error: #c0392b;
+    --error-bg: #fdf2f2;
+    --error-borde: #f5c6c6;
+    --radio: 10px;
+    --radio-sm: 6px;
+  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gris-bg); color: var(--texto); min-height: 100vh; padding: 0 0 60px; }
+  .header { background: var(--gris-header); color: #fff; padding: 28px 24px 24px; text-align: center; }
+  .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .header p { font-size: 14px; opacity: 0.65; }
+  .main { max-width: 960px; margin: 0 auto; padding: 28px 20px 0; }
+  .personal-card { background: #fff; border: 1px solid var(--gris-borde); border-radius: var(--radio); padding: 20px 24px; margin-bottom: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .personal-card h2 { grid-column: 1 / -1; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); font-weight: 600; margin-bottom: 4px; }
+  .field label { display: block; font-size: 12px; color: var(--texto-suave); margin-bottom: 5px; font-weight: 500; }
+  .field input { width: 100%; border: 1px solid var(--gris-borde); border-radius: var(--radio-sm); padding: 9px 12px; font-size: 14px; color: var(--texto); background: #fff; transition: border-color 0.15s; font-family: inherit; }
+  .field input:focus { outline: none; border-color: var(--verde); }
+  .field input.error-field { border-color: var(--error); background: var(--error-bg); }
+  .stats-bar { display: flex; background: #fff; border: 1px solid var(--gris-borde); border-radius: var(--radio); overflow: hidden; margin-bottom: 16px; }
+  .stat-item { flex: 1; padding: 14px; text-align: center; border-right: 1px solid var(--gris-borde); }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-size: 24px; font-weight: 700; color: var(--verde); line-height: 1; }
+  .stat-lbl { font-size: 11px; color: var(--texto-suave); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .progress-wrap { height: 5px; background: #e8e8e5; border-radius: 3px; margin-bottom: 28px; overflow: hidden; }
+  .progress-bar { height: 100%; background: var(--verde); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
+  .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 18px; margin-bottom: 32px; }
+  .group-card { background: #fff; border: 1px solid var(--gris-borde); border-radius: var(--radio); overflow: hidden; }
+  .group-header { background: var(--gris-header); color: #fff; padding: 10px 16px; display: flex; align-items: baseline; gap: 10px; }
+  .group-letter { font-size: 16px; font-weight: 700; }
+  .group-teams { font-size: 11px; opacity: 0.6; }
+  .match-row { display: grid; grid-template-columns: 1fr 80px 1fr; align-items: center; gap: 8px; padding: 7px 14px; border-bottom: 1px solid #f0efec; }
+  .match-row:last-child { border-bottom: none; }
+  .team { font-size: 12px; color: var(--texto); line-height: 1.3; }
+  .team.local { text-align: right; }
+  .team.visitante { text-align: left; }
+  .score-box { display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .score-box input { width: 34px; height: 32px; border: 1px solid var(--gris-borde); border-radius: var(--radio-sm); text-align: center; font-size: 15px; font-weight: 600; color: var(--texto); background: #fff; font-family: inherit; transition: border-color 0.15s; -moz-appearance: textfield; }
+  .score-box input::-webkit-outer-spin-button, .score-box input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .score-box input:focus { outline: none; border-color: var(--verde); }
+  .sep { font-size: 13px; color: #aaa; font-weight: 600; }
+  .error-banner { display: none; background: var(--error-bg); border: 1px solid var(--error-borde); border-radius: var(--radio); padding: 14px 18px; margin-bottom: 20px; font-size: 13px; color: var(--error); line-height: 1.7; }
+  .error-banner.visible { display: block; }
+  .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 12px 26px; border-radius: var(--radio-sm); font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: opacity 0.15s, transform 0.1s; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--verde); color: #fff; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: #fff; color: var(--texto); border: 1px solid var(--gris-borde); }
+  .btn-secondary:hover { background: var(--gris-bg); }
+  .note { text-align: center; font-size: 12px; color: var(--texto-suave); margin-top: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+  @media (max-width: 520px) { .personal-card { grid-template-columns: 1fr; } .groups-grid { grid-template-columns: 1fr; } .header h1 { font-size: 20px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>⚽ Prode Mundial 2026</h1>
+  <p>Fase de grupos · 48 partidos · USA, México y Canadá</p>
+</div>
+<div class="main">
+  <div class="personal-card">
+    <h2>Tus datos</h2>
+    <div class="field">
+      <label for="inp-nombre">Nombre</label>
+      <input type="text" id="inp-nombre" placeholder="Tu nombre" maxlength="40" />
+    </div>
+    <div class="field">
+      <label for="inp-apellido">Apellido</label>
+      <input type="text" id="inp-apellido" placeholder="Tu apellido" maxlength="40" />
+    </div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat-item"><div class="stat-num" id="st-done">0</div><div class="stat-lbl">Modificados</div></div>
+    <div class="stat-item"><div class="stat-num" id="st-total">48</div><div class="stat-lbl">Partidos</div></div>
+    <div class="stat-item"><div class="stat-num" id="st-pct">0%</div><div class="stat-lbl">Cambiados</div></div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="error-banner" id="error-banner"></div>
+  <div class="groups-grid" id="groups-grid"></div>
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="limpiarTodo()">↺ Resetear todo</button>
+    <button class="btn btn-primary" id="btn-pdf" onclick="descargarPDF()">↓ Descargar PDF con QR</button>
+  </div>
+  <p class="note">El QR se genera al momento de la descarga con la fecha y hora exacta.</p>
+</div>
+<script>
+const GRUPOS = [
+  {
+    letra: 'A',
+    equipos: ["Rep. Checa", "México", "Sudáfrica", "Corea del Sur"],
+    partidos: [
+      ["México", "Sudáfrica"],
+      ["Corea del Sur", "Rep. Checa"],
+      ["Rep. Checa", "Sudáfrica"],
+      ["México", "Corea del Sur"],
+      ["Rep. Checa", "México"],
+      ["Sudáfrica", "Corea del Sur"],
+    ]
+  },
+  {
+    letra: 'B',
+    equipos: ["Bosnia", "Canadá", "Qatar", "Suiza"],
+    partidos: [
+      ["Canadá", "Bosnia"],
+      ["Qatar", "Suiza"],
+      ["Suiza", "Bosnia"],
+      ["Canadá", "Qatar"],
+      ["Bosnia", "Qatar"],
+      ["Suiza", "Canadá"],
+    ]
+  },
+  {
+    letra: 'C',
+    equipos: ["Australia", "Paraguay", "Turquía", "Estados Unidos"],
+    partidos: [
+      ["Estados Unidos", "Paraguay"],
+      ["Australia", "Turquía"],
+      ["Estados Unidos", "Australia"],
+      ["Turquía", "Paraguay"],
+      ["Paraguay", "Australia"],
+      ["Turquía", "Estados Unidos"],
+    ]
+  },
+  {
+    letra: 'D',
+    equipos: ["Brasil", "Haití", "Marruecos", "Escocia"],
+    partidos: [
+      ["Brasil", "Marruecos"],
+      ["Haití", "Escocia"],
+      ["Escocia", "Marruecos"],
+      ["Brasil", "Haití"],
+      ["Marruecos", "Haití"],
+      ["Escocia", "Brasil"],
+    ]
+  },
+  {
+    letra: 'E',
+    equipos: ["Curazao", "Ecuador", "Alemania", "Costa de Marfil"],
+    partidos: [
+      ["Alemania", "Curazao"],
+      ["Costa de Marfil", "Ecuador"],
+      ["Alemania", "Costa de Marfil"],
+      ["Ecuador", "Curazao"],
+      ["Curazao", "Costa de Marfil"],
+      ["Ecuador", "Alemania"],
+    ]
+  },
+  {
+    letra: 'F',
+    equipos: ["Japón", "Países Bajos", "Suecia", "Túnez"],
+    partidos: [
+      ["Países Bajos", "Japón"],
+      ["Suecia", "Túnez"],
+      ["Países Bajos", "Suecia"],
+      ["Túnez", "Japón"],
+      ["Japón", "Suecia"],
+      ["Túnez", "Países Bajos"],
+    ]
+  },
+  {
+    letra: 'G',
+    equipos: ["Cabo Verde", "Arabia Saudita", "España", "Uruguay"],
+    partidos: [
+      ["España", "Cabo Verde"],
+      ["Arabia Saudita", "Uruguay"],
+      ["España", "Arabia Saudita"],
+      ["Uruguay", "Cabo Verde"],
+      ["Cabo Verde", "Arabia Saudita"],
+      ["Uruguay", "España"],
+    ]
+  },
+  {
+    letra: 'H',
+    equipos: ["Bélgica", "Egipto", "Irán", "Nueva Zelanda"],
+    partidos: [
+      ["Bélgica", "Egipto"],
+      ["Irán", "Nueva Zelanda"],
+      ["Bélgica", "Irán"],
+      ["Nueva Zelanda", "Egipto"],
+      ["Egipto", "Irán"],
+      ["Nueva Zelanda", "Bélgica"],
+    ]
+  },
+  {
+    letra: 'I',
+    equipos: ["Francia", "Irak", "Noruega", "Senegal"],
+    partidos: [
+      ["Francia", "Senegal"],
+      ["Irak", "Noruega"],
+      ["Francia", "Irak"],
+      ["Noruega", "Senegal"],
+      ["Noruega", "Francia"],
+      ["Senegal", "Irak"],
+    ]
+  },
+  {
+    letra: 'J',
+    equipos: ["Argelia", "Argentina", "Austria", "Jordania"],
+    partidos: [
+      ["Argentina", "Argelia"],
+      ["Austria", "Jordania"],
+      ["Argentina", "Austria"],
+      ["Jordania", "Argelia"],
+      ["Argelia", "Austria"],
+      ["Jordania", "Argentina"],
+    ]
+  },
+  {
+    letra: 'K',
+    equipos: ["Colombia", "Rep. D. Congo", "Portugal", "Uzbekistán"],
+    partidos: [
+      ["Portugal", "Rep. D. Congo"],
+      ["Uzbekistán", "Colombia"],
+      ["Portugal", "Uzbekistán"],
+      ["Colombia", "Rep. D. Congo"],
+      ["Colombia", "Portugal"],
+      ["Rep. D. Congo", "Uzbekistán"],
+    ]
+  },
+  {
+    letra: 'L',
+    equipos: ["Croacia", "Inglaterra", "Ghana", "Panamá"],
+    partidos: [
+      ["Inglaterra", "Croacia"],
+      ["Ghana", "Panamá"],
+      ["Inglaterra", "Ghana"],
+      ["Panamá", "Croacia"],
+      ["Croacia", "Ghana"],
+      ["Panamá", "Inglaterra"],
+    ]
+  },
+];
+
+// Estado: valores actuales (todos inician en 0)
+const vals = {};
+let totalModified = 0;
+
+function key(gi, mi, side) { return `${gi}-${mi}-${side}`; }
+
+function buildGrid() {
+  const grid = document.getElementById('groups-grid');
+  grid.innerHTML = '';
+  GRUPOS.forEach((g, gi) => {
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.innerHTML = `<div class="group-header"><span class="group-letter">Grupo ${g.letra}</span><span class="group-teams">${g.equipos.join(' · ')}</span></div>`;
+    g.partidos.forEach((match, mi) => {
+      const row = document.createElement('div');
+      row.className = 'match-row';
+      row.innerHTML = `
+        <span class="team local">${match[0]}</span>
+        <div class="score-box">
+          <input type="number" min="0" max="99" value="0" id="${key(gi,mi,'h')}" inputmode="numeric" />
+          <span class="sep">:</span>
+          <input type="number" min="0" max="99" value="0" id="${key(gi,mi,'a')}" inputmode="numeric" />
+        </div>
+        <span class="team visitante">${match[1]}</span>`;
+      card.appendChild(row);
+
+      vals[key(gi,mi,'h')] = 0;
+      vals[key(gi,mi,'a')] = 0;
+    });
+    grid.appendChild(card);
+  });
+
+  // Eventos
+  GRUPOS.forEach((g, gi) => {
+    g.partidos.forEach((_, mi) => {
+      ['h','a'].forEach(side => {
+        const inp = document.getElementById(key(gi,mi,side));
+        inp.addEventListener('focus', () => inp.select());
+        inp.addEventListener('input', () => {
+          let v = parseInt(inp.value);
+          if (isNaN(v) || v < 0) { inp.value = 0; v = 0; }
+          if (v > 99) { inp.value = 99; v = 99; }
+          vals[key(gi,mi,side)] = v;
+          updateStats();
+        });
+      });
+    });
+  });
+}
+
+function countModified() {
+  let mod = 0, total = 0;
+  GRUPOS.forEach((g, gi) => {
+    g.partidos.forEach((_, mi) => {
+      total++;
+      if (vals[key(gi,mi,'h')] !== 0 || vals[key(gi,mi,'a')] !== 0) mod++;
+    });
+  });
+  return { mod, total };
+}
+
+function updateStats() {
+  const { mod, total } = countModified();
+  document.getElementById('st-done').textContent = mod;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-pct').textContent = Math.round(mod / total * 100) + '%';
+  document.getElementById('progress-bar').style.width = Math.round(mod / total * 100) + '%';
+}
+
+function validar() {
+  const nombre = document.getElementById('inp-nombre').value.trim();
+  const apellido = document.getElementById('inp-apellido').value.trim();
+  const errores = [];
+  const nEl = document.getElementById('inp-nombre');
+  const aEl = document.getElementById('inp-apellido');
+  nEl.classList.remove('error-field');
+  aEl.classList.remove('error-field');
+
+  if (!nombre) { errores.push('Falta ingresar el <strong>nombre</strong>.'); nEl.classList.add('error-field'); }
+  if (!apellido) { errores.push('Falta ingresar el <strong>apellido</strong>.'); aEl.classList.add('error-field'); }
+
+  // Verificar que no haya inputs vacíos (sin valor)
+  const vacios = [];
+  GRUPOS.forEach((g, gi) => {
+    g.partidos.forEach((match, mi) => {
+      const hEl = document.getElementById(key(gi,mi,'h'));
+      const aEl2 = document.getElementById(key(gi,mi,'a'));
+      if (hEl.value === '' || aEl2.value === '') {
+        vacios.push(`Grupo ${g.letra}: ${match[0]} vs ${match[1]}`);
+      }
+    });
+  });
+  if (vacios.length > 0) {
+    errores.push(`Hay ${vacios.length} partido(s) con campos vacíos. Todos deben tener un número (usá 0 si no querés pronosticar goles).`);
+  }
+
+  const banner = document.getElementById('error-banner');
+  if (errores.length > 0) {
+    banner.innerHTML = errores.map(e => '⚠ ' + e).join('<br>');
+    banner.classList.add('visible');
+    banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return false;
+  }
+  banner.classList.remove('visible');
+  return true;
+}
+
+function buildPayload(nombre, apellido, fecha) {
+  const r = {};
+  GRUPOS.forEach((g, gi) => {
+    g.partidos.forEach((match, mi) => {
+      const h = document.getElementById(key(gi,mi,'h')).value;
+      const a = document.getElementById(key(gi,mi,'a')).value;
+      const k = `G${g.letra}${mi+1}`;
+      const loc = match[0].substring(0,3).toUpperCase();
+      const vis = match[1].substring(0,3).toUpperCase();
+      r[k] = `${loc}${h}-${a}${vis}`;
+    });
+  });
+  return JSON.stringify({ n: nombre, a: apellido, f: fecha, r });
+}
+
+function generarQRDataURL(texto) {
+  return new Promise(resolve => {
+    const tmp = document.createElement('div');
+    tmp.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+    document.body.appendChild(tmp);
+    new QRCode(tmp, { text: texto, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+    setTimeout(() => {
+      const canvas = tmp.querySelector('canvas');
+      const dataURL = canvas ? canvas.toDataURL('image/png') : null;
+      document.body.removeChild(tmp);
+      resolve(dataURL);
+    }, 600);
+  });
+}
+
+async function descargarPDF() {
+  if (!validar()) return;
+
+  const btn = document.getElementById('btn-pdf');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generando...';
+
+  try {
+    const nombre = document.getElementById('inp-nombre').value.trim();
+    const apellido = document.getElementById('inp-apellido').value.trim();
+    const fecha = new Date().toLocaleString('es-AR', { dateStyle: 'long', timeStyle: 'short' });
+    const nombreCompleto = `${nombre} ${apellido}`;
+    const payload = buildPayload(nombre, apellido, fecha);
+    const qrDataURL = await generarQRDataURL(payload);
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const PW = 210, PH = 297, M = 12, COL_GAP = 5;
+    const COL_W = (PW - M * 2 - COL_GAP) / 2;
+
+    const short = (s, max) => s.length > max ? s.substring(0, max - 1) + '.' : s;
+
+    // Header pág 1
+    doc.setFillColor(30, 30, 26);
+    doc.rect(0, 0, PW, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18); doc.setFont('helvetica', 'bold');
+    doc.text('PRODE MUNDIAL 2026', M, 13);
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text(`${nombreCompleto}   ·   ${fecha}`, M, 22);
+
+    let leftY = 38, rightY = 38, col = 0;
+    const MATCH_H = 6.5, GH = 9, GP = 3;
+
+    function bh(g) { return GH + g.partidos.length * MATCH_H + GP; }
+
+    function newPage() {
+      doc.addPage();
+      doc.setFillColor(30, 30, 26);
+      doc.rect(0, 0, PW, 16, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text(`PRODE MUNDIAL 2026  ·  ${nombreCompleto}`, M, 10);
+      leftY = 22; rightY = 22; col = 0;
+    }
+
+    GRUPOS.forEach((g, gi) => {
+      const h = bh(g);
+      const maxY = PH - 68;
+      const drawY = col === 0 ? leftY : rightY;
+
+      if (drawY + h > maxY) { newPage(); }
+
+      const dx = M + col * (COL_W + COL_GAP);
+      const dy = col === 0 ? leftY : rightY;
+
+      // Fondo bloque
+      doc.setFillColor(244, 244, 242);
+      doc.roundedRect(dx, dy, COL_W, h, 2, 2, 'F');
+
+      // Header grupo
+      doc.setFillColor(55, 55, 50);
+      doc.roundedRect(dx, dy, COL_W, GH, 2, 2, 'F');
+      doc.setFillColor(55, 55, 50);
+      doc.rect(dx, dy + GH - 2, COL_W, 2, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+      doc.text(`GRUPO ${g.letra}`, dx + 3, dy + 6);
+      doc.setFontSize(5.5); doc.setFont('helvetica', 'normal');
+      doc.text(g.equipos.map(e => short(e, 9)).join(' · '), dx + COL_W - 2, dy + 6, { align: 'right' });
+
+      // Partidos
+      g.partidos.forEach((match, mi) => {
+        const ry = dy + GH + mi * MATCH_H;
+        const hv = document.getElementById(key(gi,mi,'h')).value;
+        const av = document.getElementById(key(gi,mi,'a')).value;
+
+        // separador
+        if (mi > 0) {
+          doc.setDrawColor(224, 224, 220);
+          doc.setLineWidth(0.2);
+          doc.line(dx + 2, ry, dx + COL_W - 2, ry);
+        }
+
+        doc.setTextColor(55, 55, 50);
+        doc.setFontSize(6.5); doc.setFont('helvetica', 'normal');
+        doc.text(short(match[0], 14), dx + 2, ry + 4.2);
+        doc.text(short(match[1], 14), dx + COL_W - 2, ry + 4.2, { align: 'right' });
+        doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+        doc.setTextColor(10, 10, 8);
+        doc.text(`${hv} - ${av}`, dx + COL_W / 2, ry + 4.2, { align: 'center' });
+      });
+
+      if (col === 0) { leftY = dy + h + 4; col = 1; }
+      else { rightY = Math.max(leftY, dy + h + 4); leftY = rightY; col = 0; }
+    });
+
+    // Ajustar y final
+    let finalY = Math.max(leftY, rightY) + 4;
+    const QR_SIZE = 46;
+    if (finalY + QR_SIZE + 24 > PH) { newPage(); finalY = leftY; }
+
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 36);
+    doc.text('Escaneá para verificar resultados', PW / 2, finalY + 6, { align: 'center' });
+    if (qrDataURL) {
+      doc.addImage(qrDataURL, 'PNG', (PW - QR_SIZE) / 2, finalY + 10, QR_SIZE, QR_SIZE);
+    }
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+    doc.setTextColor(130, 130, 126);
+    doc.text(`Generado el ${fecha}  ·  ${nombreCompleto}`, PW / 2, finalY + QR_SIZE + 16, { align: 'center' });
+
+    // Paginado
+    const totalPages = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal');
+      doc.setTextColor(160, 160, 156);
+      doc.text(`Página ${p} de ${totalPages}`, PW - M, PH - 6, { align: 'right' });
+    }
+
+    const fname = `prode-mundial-2026-${apellido.toLowerCase().replace(/\s+/g,'-')}-${nombre.toLowerCase().replace(/\s+/g,'-')}.pdf`;
+    doc.save(fname);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '↓ Descargar PDF con QR';
+  }
+}
+
+function limpiarTodo() {
+  if (!confirm('¿Resetear todos los resultados a 0-0?')) return;
+  GRUPOS.forEach((g, gi) => {
+    g.partidos.forEach((_, mi) => {
+      ['h','a'].forEach(side => {
+        const inp = document.getElementById(key(gi,mi,side));
+        if (inp) { inp.value = 0; vals[key(gi,mi,side)] = 0; }
+      });
+    });
+  });
+  document.getElementById('inp-nombre').value = '';
+  document.getElementById('inp-apellido').value = '';
+  document.getElementById('error-banner').classList.remove('visible');
+  updateStats();
+}
+
+buildGrid();
+updateStats();
+</script>
+</body>
+</html>
