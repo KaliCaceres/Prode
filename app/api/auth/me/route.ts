@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -18,3 +19,4 @@ export async function GET() {
     prode_id: prode?.id || null,
   })
 }
+
