@@ -15,33 +15,28 @@ interface Entry {
   puntos: number
   exactos: number
   ganadores: number
-  partidos_jugados: number
 }
 
 export default function RankingPage() {
   const [ranking, setRanking] = useState<Entry[]>([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
-  const [miUsuario, setMiUsuario] = useState('')
   const [miProdeId, setMiProdeId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/ranking').then(r => r.json()),
-      fetch('/api/auth/me').then(r => r.json()),
+      fetch('/api/ranking', { cache: 'no-store' }).then(r => r.json()),
+      fetch('/api/auth/me', { cache: 'no-store' }).then(r => r.json()),
     ]).then(([rankData, me]) => {
       setRanking(rankData.ranking || [])
-      setMiUsuario(me.usuario || '')
       setMiProdeId(me.prode_id || null)
     }).finally(() => setCargando(false))
   }, [])
 
   function puedeVerProde(entry: Entry): boolean {
     if (!entry.prode_id) return false
-    // Puede ver si es su propio prode
     if (entry.prode_id === miProdeId) return true
-    // Puede ver si es dmartini o ccaceres
     if (PUBLICOS.includes(entry.usuario)) return true
     return false
   }
@@ -52,11 +47,12 @@ export default function RankingPage() {
 
   const conProde = ranking.filter(e => e.tiene_prode).length
   const sinProde = ranking.filter(e => !e.tiene_prode).length
+
   const medal = (i: number, entry: Entry) => {
     if (!entry.tiene_prode) return '-'
-    if (i === 0) return '🥇'
-    if (i === 1) return '🥈'
-    if (i === 2) return '🥉'
+    if (i === 0) return '??'
+    if (i === 1) return '??'
+    if (i === 2) return '??'
     return `${i + 1}`
   }
 
@@ -65,9 +61,9 @@ export default function RankingPage() {
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '6px' }}>Ranking general</h1>
         <div style={{ display: 'flex', gap: '16px', fontSize: '14px', color: 'var(--texto-suave)', flexWrap: 'wrap' }}>
-          <span>👥 {ranking.length} participantes</span>
-          <span style={{ color: 'var(--verde)', fontWeight: 600 }}>✓ {conProde} con prode cargado</span>
-          {sinProde > 0 && <span style={{ color: 'var(--error)' }}>✗ {sinProde} sin cargar</span>}
+          <span>?? {ranking.length} participantes</span>
+          <span style={{ color: 'var(--verde)', fontWeight: 600 }}>? {conProde} con prode cargado</span>
+          {sinProde > 0 && <span style={{ color: 'var(--error)' }}>? {sinProde} sin cargar</span>}
         </div>
       </div>
 
@@ -121,7 +117,7 @@ export default function RankingPage() {
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {entry.apellido}, {entry.nombre}
-                    {clickeable && <span style={{ fontSize: '10px', color: 'var(--verde)', opacity: 0.7 }}>→ ver prode</span>}
+                    {clickeable && <span style={{ fontSize: '10px', color: 'var(--verde)', opacity: 0.7 }}>? ver prode</span>}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--texto-suave)', marginTop: '1px' }}>@{entry.usuario}</div>
                 </div>
@@ -136,8 +132,8 @@ export default function RankingPage() {
                 </span>
                 <span style={{ textAlign: 'center' }}>
                   {entry.tiene_prode
-                    ? <span style={{ background: 'var(--verde-claro)', color: 'var(--verde)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>✓ Cargado</span>
-                    : <span style={{ background: 'var(--error-bg)', color: 'var(--error)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>✗ Pendiente</span>
+                    ? <span style={{ background: 'var(--verde-claro)', color: 'var(--verde)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>? Cargado</span>
+                    : <span style={{ background: 'var(--error-bg)', color: 'var(--error)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>? Pendiente</span>
                   }
                 </span>
               </div>
