@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, calcularPuntos, GRUPOS } from '@/lib/supabase'
+import { supabaseAdmin, calcularPuntos, GRUPOS } from '@/lib/supabase'
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Traer el prode
-    const { data: prode, error: e1 } = await supabase
+    const db = supabaseAdmin()
+
+    const { data: prode, error: e1 } = await db
       .from('prodes')
       .select('*')
       .eq('id', params.id)
@@ -14,13 +15,11 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       return NextResponse.json({ error: 'Prode no encontrado' }, { status: 404 })
     }
 
-    // Traer partidos finalizados
-    const { data: partidos } = await supabase
+    const { data: partidos } = await db
       .from('partidos_oficiales')
       .select('*')
       .eq('finalizado', true)
 
-    // Calcular puntos partido a partido
     const detalle: Record<string, { puntos: number; tipo: string }> = {}
     let puntos = 0, exactos = 0, ganadores = 0
 
@@ -34,8 +33,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       if (resultado.tipo === 'ganador') ganadores++
     }
 
-    // Traer puntuación de todos para el ranking
-    const { data: ranking } = await supabase
+    const { data: ranking } = await db
       .from('puntuaciones')
       .select('prode_id, puntos')
       .order('puntos', { ascending: false })

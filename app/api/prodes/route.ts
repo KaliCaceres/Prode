@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin, generarId, GRUPOS } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    // Verificar usuario autenticado
     const cookieStore = cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,7 +12,7 @@ export async function POST(req: NextRequest) {
       {
         cookies: {
           getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
             cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
           },
         },
@@ -30,7 +29,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Nombre y apellido son obligatorios' }, { status: 400 })
     }
 
-    // Validar los 72 partidos
     const partidosEsperados = GRUPOS.flatMap(g => g.partidos.map(p => p.id))
     for (const pid of partidosEsperados) {
       const r = resultados[pid]
@@ -41,7 +39,6 @@ export async function POST(req: NextRequest) {
 
     const db = supabaseAdmin()
 
-    // Verificar que no tenga ya un prode
     const { data: existing } = await db.from('prodes').select('id').eq('user_id', user.id).single()
     if (existing) {
       return NextResponse.json({ error: 'Ya tenés un prode cargado', id: existing.id }, { status: 409 })

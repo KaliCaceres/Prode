@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin, mundialEmpezado, GRUPOS } from '@/lib/supabase'
 
@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       {
         cookies: {
           getAll() { return cookieStore.getAll() },
-          setAll(cookiesToSet) {
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
             cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
           },
         },
@@ -26,7 +26,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
-    // Verificar que el prode pertenece al usuario
     const { data: prode } = await supabase.from('prodes').select('user_id').eq('id', params.id).single()
     if (!prode || prode.user_id !== user.id) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
