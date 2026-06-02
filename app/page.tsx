@@ -1,10 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { GRUPOS, Resultados } from '@/lib/supabase'
+import { GRUPOS, Resultados, createBrowserSupabase } from '@/lib/supabase'
 
-// Inicializar todos los 72 partidos en 0-0
 function initResultados(): Resultados {
   const r: Resultados = {}
   GRUPOS.forEach(g => g.partidos.forEach(p => { r[p.id] = { h: 0, a: 0 } }))
@@ -18,9 +17,28 @@ export default function Home() {
   const [resultados, setResultados] = useState<Resultados>(initResultados)
   const [errores, setErrores] = useState<string[]>([])
   const [cargando, setCargando] = useState(false)
+  const [verificando, setVerificando] = useState(true)
 
   const totalPartidos = GRUPOS.reduce((acc, g) => acc + g.partidos.length, 0)
   const modificados = Object.values(resultados).filter(r => r.h !== 0 || r.a !== 0).length
+
+  useEffect(() => {
+    // Si ya tiene prode, redirigir
+    const supabase = createBrowserSupabase()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { router.push('/auth/login'); return }
+      // Pre-completar nombre y apellido del perfil de Google
+      const nombreGoogle = user.user_metadata?.full_name || ''
+      const partes = nombreGoogle.split(' ')
+      if (partes.length >= 2) {
+        setNombre(partes[0])
+        setApellido(partes.slice(1).join(' '))
+      }
+      const { data: prode } = await supabase.from('prodes').select('id').eq('user_id', user.id).single()
+      if (prode) { router.push(`/prode/${prode.id}`); return }
+      setVerificando(false)
+    })
+  }, [])
 
   function setScore(id: string, side: 'h' | 'a', raw: string) {
     let v = parseInt(raw)
@@ -61,38 +79,43 @@ export default function Home() {
     setResultados(initResultados())
   }
 
+  if (verificando) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--texto-suave)' }}>
+        Cargando...
+      </div>
+    )
+  }
+
   return (
     <div>
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '6px' }}>Cargá tu prode</h1>
         <p style={{ color: 'var(--texto-suave)', fontSize: '14px' }}>
-          72 partidos · Fase de grupos · Completá todos los resultados y guardá tu prode para seguir tu puntuación en tiempo real.
+          72 partidos · Fase de grupos · Podés editar hasta el 11 de junio cuando arranque el Mundial.
         </p>
       </div>
 
-      {/* Errores */}
       {errores.length > 0 && (
         <div className="card" style={{ borderColor: 'var(--error-borde)', background: 'var(--error-bg)', marginBottom: '24px', color: 'var(--error)' }}>
           {errores.map((e, i) => <p key={i} style={{ fontSize: '14px' }}>⚠ {e}</p>)}
         </div>
       )}
 
-      {/* Datos personales */}
       <div className="card" style={{ marginBottom: '24px' }}>
         <p style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--texto-suave)', fontWeight: 600, marginBottom: '16px' }}>Tus datos</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '12px', color: 'var(--texto-suave)', marginBottom: '5px', fontWeight: 500 }}>Nombre</label>
-            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" maxLength={40} className={!nombre && errores.length ? 'error' : ''} />
+            <input type="text" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre" maxLength={40} />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '12px', color: 'var(--texto-suave)', marginBottom: '5px', fontWeight: 500 }}>Apellido</label>
-            <input type="text" value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Tu apellido" maxLength={40} className={!apellido && errores.length ? 'error' : ''} />
+            <input type="text" value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Tu apellido" maxLength={40} />
           </div>
         </div>
       </div>
 
-      {/* Barra de progreso */}
       <div style={{ marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--texto-suave)', marginBottom: '6px' }}>
           <span>{modificados} de {totalPartidos} partidos modificados</span>
@@ -103,7 +126,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Grupos */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))', gap: '18px', marginBottom: '32px' }}>
         {GRUPOS.map(grupo => (
           <div key={grupo.letra} style={{ background: '#fff', border: '1px solid var(--gris-borde)', borderRadius: 'var(--radio)', overflow: 'hidden' }}>
@@ -123,19 +145,15 @@ export default function Home() {
                 }}>
                   <span style={{ fontSize: '12px', textAlign: 'right' }}>{partido.local}</span>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <input
-                      type="number" min={0} max={99} value={r.h}
+                    <input type="number" min={0} max={99} value={r.h}
                       onChange={e => setScore(partido.id, 'h', e.target.value)}
                       onFocus={e => e.target.select()}
-                      style={{ width: '34px', height: '32px', padding: 0, textAlign: 'center', fontSize: '15px', fontWeight: 600 }}
-                    />
+                      style={{ width: '34px', height: '32px', padding: 0, textAlign: 'center', fontSize: '15px', fontWeight: 600 }} />
                     <span style={{ color: '#aaa', fontWeight: 600, fontSize: '13px' }}>:</span>
-                    <input
-                      type="number" min={0} max={99} value={r.a}
+                    <input type="number" min={0} max={99} value={r.a}
                       onChange={e => setScore(partido.id, 'a', e.target.value)}
                       onFocus={e => e.target.select()}
-                      style={{ width: '34px', height: '32px', padding: 0, textAlign: 'center', fontSize: '15px', fontWeight: 600 }}
-                    />
+                      style={{ width: '34px', height: '32px', padding: 0, textAlign: 'center', fontSize: '15px', fontWeight: 600 }} />
                   </div>
                   <span style={{ fontSize: '12px' }}>{partido.visitante}</span>
                 </div>
@@ -145,16 +163,12 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Acciones */}
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-secondary" onClick={limpiar}>↺ Resetear todo</button>
         <button className="btn btn-primary" onClick={enviar} disabled={cargando}>
           {cargando ? <><span className="spinner" /> Guardando...</> : '✓ Guardar mi prode'}
         </button>
       </div>
-      <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--texto-suave)', marginTop: '12px' }}>
-        Podés editar tu prode hasta el 11 de junio de 2026 cuando arranque el Mundial.
-      </p>
     </div>
   )
 }

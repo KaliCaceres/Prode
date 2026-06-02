@@ -1,24 +1,32 @@
 import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient, createServerClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Cliente para el browser (componentes client-side)
+export function createBrowserSupabase() {
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+}
 
-// Cliente con service key para operaciones de servidor (cron, writes)
+// Cliente admin con service key (solo server-side: API routes, cron)
 export function supabaseAdmin() {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY!
-  return createClient(supabaseUrl, serviceKey)
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  })
 }
 
 // ============================================================
 // TIPOS
 // ============================================================
 export type Resultado = { h: number; a: number }
-export type Resultados = Record<string, Resultado>  // "A1" -> {h:1, a:0}
+export type Resultados = Record<string, Resultado>
 
 export interface Prode {
   id: string
+  user_id: string
+  email: string
   nombre: string
   apellido: string
   resultados: Resultados
@@ -45,7 +53,6 @@ export interface Puntuacion {
   exactos: number
   ganadores: number
   partidos_jugados: number
-  actualizado_en: string
 }
 
 // ============================================================
@@ -55,21 +62,11 @@ export function calcularPuntos(
   pronostico: Resultado,
   oficial: Resultado
 ): { puntos: number; tipo: 'exacto' | 'ganador' | 'miss' } {
-  const exacto =
-    pronostico.h === oficial.h && pronostico.a === oficial.a
-
-  if (exacto) return { puntos: 2, tipo: 'exacto' }
-
-  const ganadorPron =
-    pronostico.h > pronostico.a ? 'L' :
-    pronostico.h < pronostico.a ? 'V' : 'E'
-
-  const ganadorReal =
-    oficial.h > oficial.a ? 'L' :
-    oficial.h < oficial.a ? 'V' : 'E'
-
-  if (ganadorPron === ganadorReal) return { puntos: 1, tipo: 'ganador' }
-
+  if (pronostico.h === oficial.h && pronostico.a === oficial.a) {
+    return { puntos: 2, tipo: 'exacto' }
+  }
+  const g = (r: Resultado) => r.h > r.a ? 'L' : r.h < r.a ? 'V' : 'E'
+  if (g(pronostico) === g(oficial)) return { puntos: 1, tipo: 'ganador' }
   return { puntos: 0, tipo: 'miss' }
 }
 
@@ -79,16 +76,14 @@ export function calcularPuntos(
 export function generarId(nombre: string, apellido: string): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let sufijo = ''
-  for (let i = 0; i < 4; i++) {
-    sufijo += chars[Math.floor(Math.random() * chars.length)]
-  }
+  for (let i = 0; i < 4; i++) sufijo += chars[Math.floor(Math.random() * chars.length)]
   const n = nombre.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 8)
   const a = apellido.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 10)
   return `${a}-${n}-${sufijo}`
 }
 
 // ============================================================
-// FIXTURE (mismo orden que el JSON de ESPN)
+// FIXTURE
 // ============================================================
 export const GRUPOS = [
   {
@@ -237,9 +232,7 @@ export const GRUPOS = [
   },
 ]
 
-export const MUNDIAL_START = new Date(
-  process.env.NEXT_PUBLIC_MUNDIAL_START || '2026-06-11T19:00:00Z'
-)
+export const MUNDIAL_START = new Date('2026-06-11T19:00:00Z')
 
 export function mundialEmpezado(): boolean {
   return new Date() >= MUNDIAL_START

@@ -19,9 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, fontSize: '16px' }}>
             ⚽ Prode Mundial 2026
           </a>
-          <nav style={{ display: 'flex', gap: '24px', fontSize: '14px' }}>
-            <a href="/" style={{ opacity: 0.7 }}>Cargar prode</a>
+          <nav style={{ display: 'flex', gap: '20px', alignItems: 'center', fontSize: '14px' }}>
             <a href="/ranking" style={{ opacity: 0.7 }}>Ranking</a>
+            <UserMenu />
           </nav>
         </header>
         <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 20px 80px' }}>
@@ -31,3 +31,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 }
+
+// Componente client-side para el menú de usuario
+function UserMenu() {
+  return <UserMenuClient />
+}
+
+// Se importa dinámicamente para evitar SSR issues
+import dynamic from 'next/dynamic'
+const UserMenuClient = dynamic(() => import('@/components/UserMenu'), { ssr: false })
