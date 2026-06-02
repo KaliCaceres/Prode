@@ -1,32 +1,27 @@
-import { NextResponse }
-export const dynamic = 'force-dynamic' from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const db = supabaseAdmin()
 
-  // Traer todos los usuarios
   const { data: usuarios } = await db
     .from('usuarios')
     .select('id, usuario, nombre, apellido')
     .order('apellido')
 
-  // Traer prodes existentes
   const { data: prodes } = await db
     .from('prodes')
     .select('id, usuario_id')
 
-  // Traer puntuaciones
   const { data: puntuaciones } = await db
     .from('puntuaciones')
     .select('prode_id, puntos, exactos, ganadores, partidos_jugados')
 
-  const ranking = (usuarios || []).map(u => {
-    const prode = (prodes || []).find(p => p.usuario_id === u.id)
-    const pts = prode
-      ? (puntuaciones || []).find(p => p.prode_id === prode.id)
-      : null
-
+  const ranking = (usuarios || []).map((u: any) => {
+    const prode = (prodes || []).find((p: any) => p.usuario_id === u.id)
+    const pts = prode ? (puntuaciones || []).find((p: any) => p.prode_id === prode.id) : null
     return {
       usuario_id: u.id,
       usuario: u.usuario,
@@ -41,13 +36,14 @@ export async function GET() {
     }
   })
 
-  // Ordenar: primero por puntos, luego exactos, luego los sin prode al final
-  ranking.sort((a, b) => {
+  ranking.sort((a: any, b: any) => {
     if (a.tiene_prode && !b.tiene_prode) return -1
     if (!a.tiene_prode && b.tiene_prode) return 1
     if (b.puntos !== a.puntos) return b.puntos - a.puntos
     return b.exactos - a.exactos
   })
 
-  return NextResponse.json({ ranking })
+  return NextResponse.json({ ranking }, {
+    headers: { 'Cache-Control': 'no-store' }
+  })
 }
