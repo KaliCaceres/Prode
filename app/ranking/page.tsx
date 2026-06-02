@@ -1,5 +1,6 @@
-export const dynamic = 'force-dynamic'
 'use client'
+
+export const dynamic = 'force-dynamic'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -69,13 +70,8 @@ export default function RankingPage() {
       </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          placeholder="Buscar participante..."
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-          style={{ maxWidth: '320px' }}
-        />
+        <input type="text" placeholder="Buscar participante..." value={busqueda}
+          onChange={e => setBusqueda(e.target.value)} style={{ maxWidth: '320px' }} />
       </div>
 
       {cargando ? (
@@ -89,29 +85,24 @@ export default function RankingPage() {
             fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.07em',
             color: 'var(--texto-suave)', fontWeight: 600
           }}>
-            <span>#</span>
-            <span>Participante</span>
+            <span>#</span><span>Participante</span>
             <span style={{ textAlign: 'center' }}>Puntos</span>
             <span style={{ textAlign: 'center' }}>Exactos</span>
             <span style={{ textAlign: 'center' }}>Ganados</span>
             <span style={{ textAlign: 'center' }}>Estado</span>
           </div>
-
           {filtrado.map((entry, i) => {
             const clickeable = puedeVerProde(entry)
             return (
-              <div
-                key={entry.usuario_id}
+              <div key={entry.usuario_id}
                 onClick={() => clickeable && router.push(`/prode/${entry.prode_id}`)}
                 style={{
                   display: 'grid', gridTemplateColumns: '48px 1fr 80px 70px 70px 100px',
                   padding: '12px 16px', borderBottom: '1px solid #f0efec',
-                  cursor: clickeable ? 'pointer' : 'default',
-                  alignItems: 'center',
+                  cursor: clickeable ? 'pointer' : 'default', alignItems: 'center',
                   background: !entry.tiene_prode ? '#fafaf8' : i < 3 ? (i === 0 ? '#fffdf0' : '#f8f8f8') : undefined,
                   opacity: entry.tiene_prode ? 1 : 0.7,
-                }}
-              >
+                }}>
                 <span style={{ fontSize: i < 3 && entry.tiene_prode ? '18px' : '14px', fontWeight: 600, color: 'var(--texto-suave)' }}>
                   {medal(i, entry)}
                 </span>
@@ -145,4 +136,3 @@ export default function RankingPage() {
     </div>
   )
 }
-
