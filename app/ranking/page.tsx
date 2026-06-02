@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const PUBLICOS = ['dmartini', 'ccaceres']
+
 interface Entry {
   usuario_id: string
   usuario: string
@@ -20,23 +22,36 @@ export default function RankingPage() {
   const [ranking, setRanking] = useState<Entry[]>([])
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
+  const [miUsuario, setMiUsuario] = useState('')
+  const [miProdeId, setMiProdeId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    fetch('/api/ranking')
-      .then(r => r.json())
-      .then(d => setRanking(d.ranking || []))
-      .finally(() => setCargando(false))
+    Promise.all([
+      fetch('/api/ranking').then(r => r.json()),
+      fetch('/api/auth/me').then(r => r.json()),
+    ]).then(([rankData, me]) => {
+      setRanking(rankData.ranking || [])
+      setMiUsuario(me.usuario || '')
+      setMiProdeId(me.prode_id || null)
+    }).finally(() => setCargando(false))
   }, [])
 
-  const filtrado = ranking.filter(e => {
-    const nombre = `${e.apellido} ${e.nombre} ${e.usuario}`.toLowerCase()
-    return nombre.includes(busqueda.toLowerCase())
-  })
+  function puedeVerProde(entry: Entry): boolean {
+    if (!entry.prode_id) return false
+    // Puede ver si es su propio prode
+    if (entry.prode_id === miProdeId) return true
+    // Puede ver si es dmartini o ccaceres
+    if (PUBLICOS.includes(entry.usuario)) return true
+    return false
+  }
+
+  const filtrado = ranking.filter(e =>
+    `${e.apellido} ${e.nombre} ${e.usuario}`.toLowerCase().includes(busqueda.toLowerCase())
+  )
 
   const conProde = ranking.filter(e => e.tiene_prode).length
   const sinProde = ranking.filter(e => !e.tiene_prode).length
-
   const medal = (i: number, entry: Entry) => {
     if (!entry.tiene_prode) return '-'
     if (i === 0) return '🥇'
@@ -67,10 +82,9 @@ export default function RankingPage() {
       </div>
 
       {cargando ? (
-        <p style={{ color: 'var(--texto-suave)', textAlign: 'center', padding: '48px 0' }}>Cargando ranking...</p>
+        <p style={{ color: 'var(--texto-suave)', textAlign: 'center', padding: '48px 0' }}>Cargando...</p>
       ) : (
         <div style={{ background: '#fff', border: '1px solid var(--gris-borde)', borderRadius: 'var(--radio)', overflow: 'hidden' }}>
-          {/* Header */}
           <div style={{
             display: 'grid', gridTemplateColumns: '48px 1fr 80px 70px 70px 100px',
             padding: '10px 16px', background: 'var(--gris-bg)',
@@ -86,47 +100,49 @@ export default function RankingPage() {
             <span style={{ textAlign: 'center' }}>Estado</span>
           </div>
 
-          {filtrado.map((entry, i) => (
-            <div
-              key={entry.usuario_id}
-              onClick={() => entry.prode_id && router.push(`/prode/${entry.prode_id}`)}
-              style={{
-                display: 'grid', gridTemplateColumns: '48px 1fr 80px 70px 70px 100px',
-                padding: '12px 16px', borderBottom: '1px solid #f0efec',
-                cursor: entry.prode_id ? 'pointer' : 'default',
-                alignItems: 'center',
-                background: !entry.tiene_prode ? '#fafaf8' : i < 3 ? (i === 0 ? '#fffdf0' : '#f8f8f8') : undefined,
-                opacity: entry.tiene_prode ? 1 : 0.7,
-              }}
-            >
-              <span style={{ fontSize: i < 3 && entry.tiene_prode ? '18px' : '14px', fontWeight: 600, color: 'var(--texto-suave)' }}>
-                {medal(i, entry)}
-              </span>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '14px' }}>
-                  {entry.apellido}, {entry.nombre}
+          {filtrado.map((entry, i) => {
+            const clickeable = puedeVerProde(entry)
+            return (
+              <div
+                key={entry.usuario_id}
+                onClick={() => clickeable && router.push(`/prode/${entry.prode_id}`)}
+                style={{
+                  display: 'grid', gridTemplateColumns: '48px 1fr 80px 70px 70px 100px',
+                  padding: '12px 16px', borderBottom: '1px solid #f0efec',
+                  cursor: clickeable ? 'pointer' : 'default',
+                  alignItems: 'center',
+                  background: !entry.tiene_prode ? '#fafaf8' : i < 3 ? (i === 0 ? '#fffdf0' : '#f8f8f8') : undefined,
+                  opacity: entry.tiene_prode ? 1 : 0.7,
+                }}
+              >
+                <span style={{ fontSize: i < 3 && entry.tiene_prode ? '18px' : '14px', fontWeight: 600, color: 'var(--texto-suave)' }}>
+                  {medal(i, entry)}
+                </span>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {entry.apellido}, {entry.nombre}
+                    {clickeable && <span style={{ fontSize: '10px', color: 'var(--verde)', opacity: 0.7 }}>→ ver prode</span>}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--texto-suave)', marginTop: '1px' }}>@{entry.usuario}</div>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--texto-suave)', marginTop: '1px' }}>
-                  @{entry.usuario}
-                </div>
+                <span style={{ textAlign: 'center', fontWeight: 700, fontSize: '18px', color: entry.tiene_prode ? 'var(--verde)' : '#ccc' }}>
+                  {entry.tiene_prode ? entry.puntos : '-'}
+                </span>
+                <span style={{ textAlign: 'center', fontSize: '14px', color: '#0a7c3e' }}>
+                  {entry.tiene_prode ? entry.exactos : '-'}
+                </span>
+                <span style={{ textAlign: 'center', fontSize: '14px', color: '#3b5ec6' }}>
+                  {entry.tiene_prode ? entry.ganadores : '-'}
+                </span>
+                <span style={{ textAlign: 'center' }}>
+                  {entry.tiene_prode
+                    ? <span style={{ background: 'var(--verde-claro)', color: 'var(--verde)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>✓ Cargado</span>
+                    : <span style={{ background: 'var(--error-bg)', color: 'var(--error)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>✗ Pendiente</span>
+                  }
+                </span>
               </div>
-              <span style={{ textAlign: 'center', fontWeight: 700, fontSize: '18px', color: entry.tiene_prode ? 'var(--verde)' : '#ccc' }}>
-                {entry.tiene_prode ? entry.puntos : '-'}
-              </span>
-              <span style={{ textAlign: 'center', fontSize: '14px', color: '#0a7c3e' }}>
-                {entry.tiene_prode ? entry.exactos : '-'}
-              </span>
-              <span style={{ textAlign: 'center', fontSize: '14px', color: '#3b5ec6' }}>
-                {entry.tiene_prode ? entry.ganadores : '-'}
-              </span>
-              <span style={{ textAlign: 'center' }}>
-                {entry.tiene_prode
-                  ? <span style={{ background: 'var(--verde-claro)', color: 'var(--verde)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>✓ Cargado</span>
-                  : <span style={{ background: 'var(--error-bg)', color: 'var(--error)', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>✗ Pendiente</span>
-                }
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
