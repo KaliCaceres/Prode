@@ -1,37 +1,28 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { jwtVerify } from 'jose'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'prode2026secret')
+
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
-  const isPublic = pathname.startsWith('/auth')
 
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+  // Rutas públicas
+  if (pathname.startsWith('/auth') || pathname.startsWith('/api/auth')) {
+    return NextResponse.next()
   }
 
-  return supabaseResponse
+  const token = request.cookies.get('prode_token')?.value
+
+  if (!token) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
+  try {
+    await jwtVerify(token, SECRET)
+    return NextResponse.next()
+  } catch {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
 }
 
 export const config = {

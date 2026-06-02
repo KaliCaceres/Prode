@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { GRUPOS, Resultados, createBrowserSupabase } from '@/lib/supabase'
+import { GRUPOS, Resultados } from '@/lib/supabase'
 
 function initResultados(): Resultados {
   const r: Resultados = {}
@@ -23,21 +23,13 @@ export default function Home() {
   const modificados = Object.values(resultados).filter(r => r.h !== 0 || r.a !== 0).length
 
   useEffect(() => {
-    // Si ya tiene prode, redirigir
-    const supabase = createBrowserSupabase()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.push('/auth/login'); return }
-      // Pre-completar nombre y apellido del perfil de Google
-      const nombreGoogle = user.user_metadata?.full_name || ''
-      const partes = nombreGoogle.split(' ')
-      if (partes.length >= 2) {
-        setNombre(partes[0])
-        setApellido(partes.slice(1).join(' '))
-      }
-      const { data: prode } = await supabase.from('prodes').select('id').eq('user_id', user.id).single()
-      if (prode) { router.push(`/prode/${prode.id}`); return }
+    fetch('/api/auth/me').then(r => r.json()).then(data => {
+      if (data.error) { router.push('/auth/login'); return }
+      setNombre(data.nombre || '')
+      setApellido(data.apellido || '')
+      if (data.prode_id) { router.push(`/prode/${data.prode_id}`); return }
       setVerificando(false)
-    })
+    }).catch(() => router.push('/auth/login'))
   }, [])
 
   function setScore(id: string, side: 'h' | 'a', raw: string) {
@@ -79,20 +71,16 @@ export default function Home() {
     setResultados(initResultados())
   }
 
-  if (verificando) {
-    return (
-      <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--texto-suave)' }}>
-        Cargando...
-      </div>
-    )
-  }
+  if (verificando) return (
+    <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--texto-suave)' }}>Cargando...</div>
+  )
 
   return (
     <div>
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '6px' }}>Cargá tu prode</h1>
         <p style={{ color: 'var(--texto-suave)', fontSize: '14px' }}>
-          72 partidos · Fase de grupos · Podés editar hasta el 11 de junio cuando arranque el Mundial.
+          72 partidos · Fase de grupos · Podés editar hasta el 11 de junio.
         </p>
       </div>
 
