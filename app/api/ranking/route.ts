@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const db = supabaseAdmin()
 
-  const { data: usuarios } = await db
+  const { data: usuarios, error } = await db
     .from('usuarios')
     .select('id, usuario, nombre, apellido')
     .order('apellido')
+    .limit(100)
 
   const { data: prodes } = await db
     .from('prodes')
@@ -43,7 +44,7 @@ export async function GET() {
     return b.exactos - a.exactos
   })
 
-  return NextResponse.json({ ranking }, {
+  return NextResponse.json({ ranking, debug_count: usuarios?.length }, {
     headers: { 'Cache-Control': 'no-store' }
   })
 }
