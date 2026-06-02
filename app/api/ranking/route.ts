@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
-  const db = supabaseAdmin()
+  const db = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  )
 
-  const { data: usuarios, error } = await db
+  const { data: usuarios } = await db
     .from('usuarios')
     .select('id, usuario, nombre, apellido')
     .order('apellido')
-    .limit(100)
+    .range(0, 999)
 
   const { data: prodes } = await db
     .from('prodes')
@@ -44,7 +48,8 @@ export async function GET() {
     return b.exactos - a.exactos
   })
 
-  return NextResponse.json({ ranking, debug_count: usuarios?.length }, {
-    headers: { 'Cache-Control': 'no-store' }
-  })
+  return NextResponse.json(
+    { ranking, total: usuarios?.length ?? 0 },
+    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' } }
+  )
 }
