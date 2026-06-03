@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { GRUPOS, Resultados, calcularPosicionesGrupo } from '@/lib/supabase'
+import { banderaUrl } from '@/lib/banderas'
 
 function initResultados(): Resultados {
   const r: Resultados = {}
@@ -10,30 +11,29 @@ function initResultados(): Resultados {
   return r
 }
 
+function Flag({ equipo }: { equipo: string }) {
+  const src = banderaUrl(equipo)
+  if (!src) return null
+  return <img src={src} alt={equipo} width={20} height={15} style={{ borderRadius: '2px', verticalAlign: 'middle', display: 'inline-block', marginRight: '4px' }} />
+}
+
 function TablaGrupo({ grupo, resultados }: { grupo: typeof GRUPOS[0]; resultados: Resultados }) {
   const posiciones = calcularPosicionesGrupo(grupo.equipos, grupo.partidos, resultados)
   return (
-    <div style={{ marginTop: '8px', borderTop: '1px solid #f0efec' }}>
+    <div style={{ borderTop: '1px solid #f0efec' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
         <thead>
           <tr style={{ background: '#f8f8f6' }}>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--texto-suave)' }}>#</th>
-            <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--texto-suave)' }}>Equipo</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>PJ</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>G</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>E</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>P</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>GF</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>GC</th>
-            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>Dif</th>
-            <th style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>Pts</th>
+            {['#','Equipo','PJ','G','E','P','GF','GC','Dif','Pts'].map((h, i) => (
+              <th key={h} style={{ padding: '4px 6px', textAlign: i <= 1 ? 'left' : 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>{h}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {posiciones.map((p, i) => (
             <tr key={p.equipo} style={{ background: i < 2 ? '#f0faf4' : undefined, borderTop: '1px solid #f0efec' }}>
-              <td style={{ padding: '4px 8px', color: i < 2 ? 'var(--verde)' : 'var(--texto-suave)', fontWeight: i < 2 ? 700 : 400 }}>{i + 1}</td>
-              <td style={{ padding: '4px 8px', fontWeight: 500, color: 'var(--texto)' }}>{p.equipo}</td>
+              <td style={{ padding: '4px 6px', color: i < 2 ? 'var(--verde)' : 'var(--texto-suave)', fontWeight: i < 2 ? 700 : 400 }}>{i + 1}</td>
+              <td style={{ padding: '4px 6px', fontWeight: 500 }}><Flag equipo={p.equipo} />{p.equipo}</td>
               <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pj}</td>
               <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pg}</td>
               <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pe}</td>
@@ -41,7 +41,7 @@ function TablaGrupo({ grupo, resultados }: { grupo: typeof GRUPOS[0]; resultados
               <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.gf}</td>
               <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.gc}</td>
               <td style={{ padding: '4px 6px', textAlign: 'center', color: p.dif > 0 ? 'var(--verde)' : p.dif < 0 ? 'var(--error)' : 'var(--texto-suave)' }}>{p.dif > 0 ? '+' : ''}{p.dif}</td>
-              <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: 'var(--texto)' }}>{p.pts}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 700 }}>{p.pts}</td>
             </tr>
           ))}
         </tbody>
@@ -120,9 +120,7 @@ export default function Home() {
     <div>
       <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '6px' }}>Cargá tu prode</h1>
-        <p style={{ color: 'var(--texto-suave)', fontSize: '14px' }}>
-          72 partidos · Fase de grupos · Podés editar hasta el 10 de junio.
-        </p>
+        <p style={{ color: 'var(--texto-suave)', fontSize: '14px' }}>72 partidos · Fase de grupos · Podés editar hasta el 10 de junio.</p>
       </div>
 
       {errores.length > 0 && (
@@ -148,10 +146,8 @@ export default function Home() {
       <div style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--texto-suave)', marginBottom: '6px' }}>
           <span>{modificados} de {totalPartidos} partidos modificados</span>
-          <button
-            onClick={() => setMostrarTablas(!mostrarTablas)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--verde)', fontFamily: 'inherit' }}
-          >
+          <button onClick={() => setMostrarTablas(!mostrarTablas)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--verde)', fontFamily: 'inherit' }}>
             {mostrarTablas ? '▲ Ocultar tablas' : '▼ Mostrar tablas'}
           </button>
         </div>
@@ -163,9 +159,11 @@ export default function Home() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(440px, 1fr))', gap: '18px', marginBottom: '32px' }}>
         {GRUPOS.map(grupo => (
           <div key={grupo.letra} style={{ background: '#fff', border: '1px solid var(--gris-borde)', borderRadius: 'var(--radio)', overflow: 'hidden' }}>
-            <div style={{ background: 'var(--gris-header)', color: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+            <div style={{ background: 'var(--gris-header)', color: '#fff', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '16px', fontWeight: 700 }}>Grupo {grupo.letra}</span>
-              <span style={{ fontSize: '11px', opacity: 0.6 }}>{grupo.equipos.join(' · ')}</span>
+              <span style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                {grupo.equipos.map(e => <img key={e} src={banderaUrl(e)} alt={e} width={20} height={15} style={{ borderRadius: '2px' }} title={e} />)}
+              </span>
             </div>
             {grupo.partidos.map(partido => {
               const r = resultados[partido.id]
@@ -177,7 +175,9 @@ export default function Home() {
                   borderBottom: '1px solid #f0efec',
                   background: modificado ? 'var(--verde-claro)' : undefined
                 }}>
-                  <span style={{ fontSize: '12px', textAlign: 'right' }}>{partido.local}</span>
+                  <span style={{ fontSize: '12px', textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                    {partido.local}<Flag equipo={partido.local} />
+                  </span>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                     <input type="number" min={0} max={99} value={r.h}
                       onChange={e => setScore(partido.id, 'h', e.target.value)}
@@ -189,7 +189,9 @@ export default function Home() {
                       onFocus={e => e.target.select()}
                       style={{ width: '34px', height: '32px', padding: 0, textAlign: 'center', fontSize: '15px', fontWeight: 600 }} />
                   </div>
-                  <span style={{ fontSize: '12px' }}>{partido.visitante}</span>
+                  <span style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Flag equipo={partido.visitante} />{partido.visitante}
+                  </span>
                 </div>
               )
             })}
