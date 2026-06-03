@@ -125,7 +125,7 @@ export default function AdminPage() {
                 fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
                 background: grupoActivo === g ? 'var(--gris-header)' : '#fff',
                 color: grupoActivo === g ? '#fff' : 'var(--texto)',
-                border: grupoActivo === g ? 'none' : '1px solid var(--gris-borde)',
+                outline: grupoActivo === g ? 'none' : '1px solid var(--gris-borde)',
                 position: 'relative'
               }}
             >
@@ -226,3 +226,4 @@ export default function AdminPage() {
     </div>
   )
 }
+
