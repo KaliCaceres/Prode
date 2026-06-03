@@ -1,10 +1,13 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import dynamic from 'next/dynamic'
 
 export const metadata: Metadata = {
   title: 'Prode Mundial 2026',
   description: 'Cargá tu prode del Mundial 2026 y seguí tu puntuación en tiempo real',
 }
+
+const UserMenu = dynamic(() => import('@/components/UserMenu'), { ssr: false })
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,12 +34,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   )
 }
-
-// Componente client-side para el menú de usuario
-function UserMenu() {
-  return <UserMenuClient />
-}
-
-// Se importa dinámicamente para evitar SSR issues
-import dynamic from 'next/dynamic'
-const UserMenuClient = dynamic(() => import('@/components/UserMenu'), { ssr: false })

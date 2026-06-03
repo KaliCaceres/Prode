@@ -3,16 +3,22 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const ADMINS = ['dmartini', 'ccaceres']
+
 export default function UserMenu() {
   const router = useRouter()
   const [nombre, setNombre] = useState<string | null>(null)
+  const [usuario, setUsuario] = useState<string>('')
   const [open, setOpen] = useState(false)
   const [prodeId, setProdeId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Leer nombre del cookie (no httpOnly) o de la API
-    fetch('/api/auth/me').then(r => r.json()).then(d => {
-      if (d.nombre) { setNombre(d.nombre); setProdeId(d.prode_id) }
+    fetch('/api/auth/me', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      if (d.nombre) {
+        setNombre(d.nombre)
+        setUsuario(d.usuario || '')
+        setProdeId(d.prode_id)
+      }
     }).catch(() => {})
   }, [])
 
@@ -22,6 +28,8 @@ export default function UserMenu() {
   }
 
   if (!nombre) return null
+
+  const esAdmin = ADMINS.includes(usuario)
 
   return (
     <div style={{ position: 'relative' }}>
@@ -43,7 +51,7 @@ export default function UserMenu() {
           position: 'absolute', right: 0, top: '40px',
           background: '#fff', border: '1px solid var(--gris-borde)',
           borderRadius: 'var(--radio)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          minWidth: '160px', overflow: 'hidden', zIndex: 200
+          minWidth: '180px', overflow: 'hidden', zIndex: 200
         }}>
           {prodeId && (
             <a href={`/prode/${prodeId}`} onClick={() => setOpen(false)} style={{
@@ -51,6 +59,14 @@ export default function UserMenu() {
               color: 'var(--texto)', borderBottom: '1px solid var(--gris-borde)'
             }}>
               Mi prode
+            </a>
+          )}
+          {esAdmin && (
+            <a href="/admin" onClick={() => setOpen(false)} style={{
+              display: 'block', padding: '10px 16px', fontSize: '13px',
+              color: 'var(--texto)', borderBottom: '1px solid var(--gris-borde)'
+            }}>
+              ⚙ Cargar resultados
             </a>
           )}
           <button onClick={logout} style={{
