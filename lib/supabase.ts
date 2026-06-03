@@ -1,15 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
-import { createBrowserClient, createServerClient } from '@supabase/ssr'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Cliente para el browser (componentes client-side)
 export function createBrowserSupabase() {
   return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
-// Cliente admin con service key (solo server-side: API routes, cron)
 export function supabaseAdmin() {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY!
   return createClient(supabaseUrl, serviceKey, {
@@ -17,16 +15,12 @@ export function supabaseAdmin() {
   })
 }
 
-// ============================================================
-// TIPOS
-// ============================================================
 export type Resultado = { h: number; a: number }
 export type Resultados = Record<string, Resultado>
 
 export interface Prode {
   id: string
-  user_id: string
-  email: string
+  usuario_id: string
   nombre: string
   apellido: string
   resultados: Resultados
@@ -55,9 +49,6 @@ export interface Puntuacion {
   partidos_jugados: number
 }
 
-// ============================================================
-// LÓGICA DE PUNTAJE
-// ============================================================
 export function calcularPuntos(
   pronostico: Resultado,
   oficial: Resultado
@@ -70,9 +61,6 @@ export function calcularPuntos(
   return { puntos: 0, tipo: 'miss' }
 }
 
-// ============================================================
-// GENERADOR DE ID
-// ============================================================
 export function generarId(nombre: string, apellido: string): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let sufijo = ''
@@ -82,9 +70,6 @@ export function generarId(nombre: string, apellido: string): string {
   return `${a}-${n}-${sufijo}`
 }
 
-// ============================================================
-// FIXTURE
-// ============================================================
 export const GRUPOS = [
   {
     letra: 'A',
@@ -232,8 +217,68 @@ export const GRUPOS = [
   },
 ]
 
-export const MUNDIAL_START = new Date('2026-06-11T19:00:00Z')
+// Cambiado a 10 de junio
+export const MUNDIAL_START = new Date('2026-06-10T23:59:00Z')
 
 export function mundialEmpezado(): boolean {
   return new Date() >= MUNDIAL_START
+}
+
+// ============================================================
+// LÓGICA DE TABLA DE POSICIONES DE GRUPO
+// ============================================================
+export interface PosicionEquipo {
+  equipo: string
+  pts: number
+  pj: number
+  pg: number
+  pe: number
+  pp: number
+  gf: number
+  gc: number
+  dif: number
+}
+
+export function calcularPosicionesGrupo(
+  equipos: string[],
+  partidos: { id: string; local: string; visitante: string }[],
+  resultados: Resultados
+): PosicionEquipo[] {
+  const tabla: Record<string, PosicionEquipo> = {}
+
+  equipos.forEach(e => {
+    tabla[e] = { equipo: e, pts: 0, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dif: 0 }
+  })
+
+  partidos.forEach(p => {
+    const r = resultados[p.id]
+    if (!r || (r.h === 0 && r.a === 0)) return
+    // Solo contar si al menos uno metió gol o es un empate explícito
+    const loc = tabla[p.local]
+    const vis = tabla[p.visitante]
+    if (!loc || !vis) return
+
+    loc.pj++; vis.pj++
+    loc.gf += r.h; loc.gc += r.a
+    vis.gf += r.a; vis.gc += r.h
+    loc.dif = loc.gf - loc.gc
+    vis.dif = vis.gf - vis.gc
+
+    if (r.h > r.a) {
+      loc.pg++; loc.pts += 3
+      vis.pp++
+    } else if (r.h < r.a) {
+      vis.pg++; vis.pts += 3
+      loc.pp++
+    } else {
+      loc.pe++; loc.pts++
+      vis.pe++; vis.pts++
+    }
+  })
+
+  return Object.values(tabla).sort((a, b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts
+    if (b.dif !== a.dif) return b.dif - a.dif
+    return b.gf - a.gf
+  })
 }

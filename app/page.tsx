@@ -2,12 +2,52 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { GRUPOS, Resultados } from '@/lib/supabase'
+import { GRUPOS, Resultados, calcularPosicionesGrupo } from '@/lib/supabase'
 
 function initResultados(): Resultados {
   const r: Resultados = {}
   GRUPOS.forEach(g => g.partidos.forEach(p => { r[p.id] = { h: 0, a: 0 } }))
   return r
+}
+
+function TablaGrupo({ grupo, resultados }: { grupo: typeof GRUPOS[0]; resultados: Resultados }) {
+  const posiciones = calcularPosicionesGrupo(grupo.equipos, grupo.partidos, resultados)
+  return (
+    <div style={{ marginTop: '8px', borderTop: '1px solid #f0efec' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+        <thead>
+          <tr style={{ background: '#f8f8f6' }}>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--texto-suave)' }}>#</th>
+            <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--texto-suave)' }}>Equipo</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>PJ</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>G</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>E</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>P</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>GF</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>GC</th>
+            <th style={{ padding: '4px 6px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>Dif</th>
+            <th style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600, color: 'var(--texto-suave)' }}>Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {posiciones.map((p, i) => (
+            <tr key={p.equipo} style={{ background: i < 2 ? '#f0faf4' : undefined, borderTop: '1px solid #f0efec' }}>
+              <td style={{ padding: '4px 8px', color: i < 2 ? 'var(--verde)' : 'var(--texto-suave)', fontWeight: i < 2 ? 700 : 400 }}>{i + 1}</td>
+              <td style={{ padding: '4px 8px', fontWeight: 500, color: 'var(--texto)' }}>{p.equipo}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pj}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pg}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pe}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.pp}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.gf}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: 'var(--texto-suave)' }}>{p.gc}</td>
+              <td style={{ padding: '4px 6px', textAlign: 'center', color: p.dif > 0 ? 'var(--verde)' : p.dif < 0 ? 'var(--error)' : 'var(--texto-suave)' }}>{p.dif > 0 ? '+' : ''}{p.dif}</td>
+              <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: 'var(--texto)' }}>{p.pts}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 export default function Home() {
@@ -18,6 +58,7 @@ export default function Home() {
   const [errores, setErrores] = useState<string[]>([])
   const [cargando, setCargando] = useState(false)
   const [verificando, setVerificando] = useState(true)
+  const [mostrarTablas, setMostrarTablas] = useState(true)
 
   const totalPartidos = GRUPOS.reduce((acc, g) => acc + g.partidos.length, 0)
   const modificados = Object.values(resultados).filter(r => r.h !== 0 || r.a !== 0).length
@@ -77,10 +118,10 @@ export default function Home() {
 
   return (
     <div>
-      <div style={{ marginBottom: '32px' }}>
+      <div style={{ marginBottom: '28px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 700, marginBottom: '6px' }}>Cargá tu prode</h1>
         <p style={{ color: 'var(--texto-suave)', fontSize: '14px' }}>
-          72 partidos · Fase de grupos · Podés editar hasta el 11 de junio.
+          72 partidos · Fase de grupos · Podés editar hasta el 10 de junio.
         </p>
       </div>
 
@@ -104,10 +145,15 @@ export default function Home() {
         </div>
       </div>
 
-      <div style={{ marginBottom: '28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--texto-suave)', marginBottom: '6px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: 'var(--texto-suave)', marginBottom: '6px' }}>
           <span>{modificados} de {totalPartidos} partidos modificados</span>
-          <span>{Math.round(modificados / totalPartidos * 100)}%</span>
+          <button
+            onClick={() => setMostrarTablas(!mostrarTablas)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--verde)', fontFamily: 'inherit' }}
+          >
+            {mostrarTablas ? '▲ Ocultar tablas' : '▼ Mostrar tablas'}
+          </button>
         </div>
         <div style={{ height: '5px', background: '#e8e8e5', borderRadius: '3px', overflow: 'hidden' }}>
           <div style={{ height: '100%', background: 'var(--verde)', borderRadius: '3px', width: `${Math.round(modificados / totalPartidos * 100)}%`, transition: 'width 0.3s' }} />
@@ -147,6 +193,7 @@ export default function Home() {
                 </div>
               )
             })}
+            {mostrarTablas && <TablaGrupo grupo={grupo} resultados={resultados} />}
           </div>
         ))}
       </div>
@@ -157,6 +204,9 @@ export default function Home() {
           {cargando ? <><span className="spinner" /> Guardando...</> : '✓ Guardar mi prode'}
         </button>
       </div>
+      <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--texto-suave)', marginTop: '12px' }}>
+        Podés editar tu prode hasta el 10 de junio de 2026.
+      </p>
     </div>
   )
 }
